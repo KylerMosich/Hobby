@@ -26,5 +26,5 @@ def connect(headless=True):
         except JavascriptException as e:
             continue
 
-    print("Driver Initialized.")
+    print("Foundry Driver Initialized.")
     return driver

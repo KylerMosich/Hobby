@@ -4,14 +4,15 @@ import foundry_socket
 import sheets_socket
 
 
-def excel_date(tstamp):
+# Convert an epoch timestamp to a Google Sheets date serial.
+def sheets_date(tstamp):
     temp = dt.datetime(1899, 12, 30)
     delta = dt.datetime.fromtimestamp(tstamp / 1000) - temp
     return float(delta.days) + (float(delta.seconds) / 86400)
 
 
 # Connect to Foundry and Google Sheets.
-driver = foundry_socket.connect()
+foundry = foundry_socket.connect()
 api = sheets_socket.connect()
 
 # Get spreadsheet content.
@@ -20,26 +21,27 @@ last_row = values[-1]
 
 # Create username dict.
 usernames = {}
-users = driver.execute_script("return game.users._source")
+users = foundry.execute_script("return game.users._source")
 for user in users:
     usernames[user["_id"]] = user["name"]
 
 # Get and count messages.
-messages = driver.execute_script("return game.messages._source.filter(message => message.type === 2);")
+messages = foundry.execute_script("return game.messages._source.filter(message => message.type === 2);")
+foundry.quit()  # Foundry is not used again past here.
 data = []
 for message in messages:
     # Skip messages before existing timestamp.
-    serial = excel_date(message["timestamp"])
+    serial = sheets_date(message["timestamp"])
     if serial <= last_row[0]:
         continue
 
-    data_point = None
     # Create data_point with the same message count as the last.
+    data_point = None
     if len(data) == 0:
         data_point = {"time": serial}
         i = 1
         for user in usernames:
-            data_point[usernames[user]] = 0#last_row[i]
+            data_point[usernames[user]] = last_row[i]
             i += 1
     else:
         data_point = data[-1].copy()
